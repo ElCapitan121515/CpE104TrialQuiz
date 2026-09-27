@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#10233f" />
+    <title>Secure Quiz</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%2310233f'/%3E%3Cpath d='M18 28h28v20H18zM23 28v-6a9 9 0 0118 0v6' fill='none' stroke='%2344d1b6' stroke-width='5'/%3E%3C/svg%3E"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      :root {
+        --navy: #10233f;
+        --ink: #172033;
+        --muted: #627087;
+        --mint: #44d1b6;
+        --paper: #f4f7fb;
+        --line: #dbe2ed;
+        --danger: #bf3c4a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          16px/1.5 system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
+      }
+      .shell {
+        max-width: 920px;
+        margin: auto;
+        padding: 28px 20px 60px;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .brand {
+        font-weight: 800;
+        color: var(--navy);
+        letter-spacing: 0.02em;
+      }
+      .pill {
+        font-size: 0.85rem;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #e5fbf6;
+        color: #0e6759;
+        font-weight: 700;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: clamp(22px, 4vw, 40px);
+        box-shadow: 0 8px 30px #1523420a;
+      }
+      h1 {
+        font-size: clamp(1.7rem, 4vw, 2.5rem);
+        line-height: 1.14;
+        margin: 0 0 12px;
+        color: var(--navy);
+      }
+      h2 {
+        margin: 0 0 8px;
+        color: var(--navy);
+      }
+      p {
+        color: var(--muted);
+      }
+      .settings {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 24px 0;
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--navy);
+      }
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 11px;
+        font: inherit;
+      }
+      .note {
+        background: #fff7e8;
+        border-left: 4px solid #e9a72e;
+        padding: 12px 14px;
+        border-radius: 6px;
+        color: #735112;
+        font-size: 0.92rem;
+      }
+      .btn {
+        border: 0;
+        border-radius: 10px;
+        background: var(--navy);
+        color: #fff;
+        padding: 13px 18px;
+        font: 700 1rem inherit;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #18375f;
+      }
+      .btn.secondary {
+        background: #edf2f7;
+        color: var(--navy);
+      }
+      .hidden {
+        display: none !important;
+      }
+      .quiz-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 20px;
+        margin-bottom: 26px;
+      }
+      .timer {
+        font-weight: 800;
+        font-size: 1.25rem;
+        color: var(--navy);
+      }
+      .progress {
+        height: 8px;
+        background: #e9edf4;
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .progress span {
+        display: block;
+        height: 100%;
+        background: var(--mint);
+        transition: width 0.2s;
+      }
+      .question-num {
+        font-weight: 800;
+        color: #0e6759;
+        margin: 20px 0 6px;
+      }
+      .choice {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        padding: 14px;
+        margin: 10px 0;
+        cursor: pointer;
+      }
+      .choice:has(input:checked) {
+        border-color: var(--mint);
+        background: #f0fffb;
+      }
+      .choice input {
+        width: auto;
+        margin-top: 5px;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin-top: 28px;
+      }
+      .warning {
+        position: fixed;
+        inset: auto 20px 20px auto;
+        max-width: 430px;
+        background: #fff0f1;
+        border: 1px solid #f2b1b8;
+        color: #7d1d2a;
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 10px 30px #0002;
+      }
+      .summary {
+        display: grid;
+        gap: 10px;
+      }
+      .ok {
+        color: #0d705d;
+        font-weight: 800;
+      }
+      @media (max-width: 560px) {
+        .settings {
+          grid-template-columns: 1fr;
+        }
+        .top {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .actions {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="top">
+        <div class="brand">SECURE QUIZ</div>
+        <div class="pill" id="status">Setup</div>
+      </header>
+      <section class="card" id="setup">
+        <h1>Start your assessment</h1>
+        <p>Enter your details, then begin in fullscreen mode. Your answers are saved while you work.</p>
+        <div class="settings">
+          <label class="field">Student name<input id="studentName" required placeholder="e.g., Juan Dela Cruz" /></label
+          ><label class="field">Student ID / email<input id="studentId" required placeholder="e.g., 2026-00001" /></label>
+        </div>
+        <div class="note">
+          Do not leave this page, switch tabs, minimize the browser, or exit fullscreen. Each event is recorded. After <strong id="limitText">3</strong> violations, your quiz is submitted
+          automatically.
+        </div>
+        <p><button class="btn" id="startBtn">Enter fullscreen and start</button></p>
+      </section>
+      <section class="card hidden" id="quiz">
+        <div class="quiz-head">
+          <div>
+            <strong id="quizTitle">Multiple-Choice Quiz</strong>
+            <div id="violationText" style="font-size: 0.9rem; color: var(--muted)">Violations: 0 / 3</div>
+          </div>
+          <div class="timer" id="timer">20:00</div>
+        </div>
+        <div class="progress"><span id="bar"></span></div>
+        <div id="question"></div>
+        <div class="actions"><button class="btn secondary" id="prev">Previous</button><button class="btn" id="next">Next question</button></div>
+      </section>
+      <section class="card hidden" id="complete">
+        <h1 id="completeHeading">Quiz submitted</h1>
+        <div class="summary" id="summary"></div>
+      </section>
+    </main>
+    <div class="warning hidden" id="warning"></div>
+    <script>
+      /* CONFIGURE THESE VALUES AFTER CREATING YOUR SUPABASE PROJECT. The anon key is safe in a browser only when the RLS policies in supabase-schema.sql are enabled. */
+      const CONFIG = {
+        supabaseUrl: "https://fqwfglmiasqysccrnuva.supabase.co",
+        supabaseAnonKey:
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxd2ZnbG1pYXNxeXNjY3JudnVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1MTg4NTYsImV4cCI6MjEwNjA5NDg1Nn0.I0O6gUyPDjt34lqFTIilGIh1EJ1xSp36g3prGtNO6yM",
+        quizId: "61e2ae18-ac25-402f-8f35-58ebd0c06b23",
+        timeLimitMinutes: 20,
+        maxViolations: 3,
+      };
+      const fallbackQuestions = [
+        { text: "Which SQL clause filters grouped results?", choices: ["WHERE", "HAVING", "ORDER BY", "DISTINCT"], answer: 1 },
+        { text: "Which command permanently saves a transaction?", choices: ["ROLLBACK", "COMMIT", "DELETE", "GRANT"], answer: 1 },
+        { text: "A primary key must be:", choices: ["Duplicated", "Nullable", "Unique", "A calculated field"], answer: 2 },
+      ];
+      let db = null,
+        attempt = null,
+        questions = [],
+        current = 0,
+        answers = {},
+        violations = 0,
+        seconds = CONFIG.timeLimitMinutes * 60,
+        tick = null,
+        locked = false;
+      const $ = (s) => document.querySelector(s);
+      const shuffle = (a) => [...a].sort(() => Math.random() - 0.5);
+      function readySupabase() {
+        return !CONFIG.supabaseUrl.startsWith("PASTE_") && !CONFIG.supabaseAnonKey.startsWith("PASTE_") && !CONFIG.quizId.startsWith("replace-");
+      }
+      function warn(msg) {
+        const el = $("#warning");
+        el.textContent = msg;
+        el.classList.remove("hidden");
+        setTimeout(() => el.classList.add("hidden"), 5500);
+      }
+      async function log(eventType, detail = {}) {
+        if (!db || !attempt) return;
+        await db.from("quiz_violations").insert({ attempt_id: attempt.id, event_type: eventType, detail });
+      }
+      async function autosave(questionId, choiceIndex) {
+        if (!db || !attempt) return;
+        await db
+          .from("quiz_answers")
+          .upsert({ attempt_id: attempt.id, question_id: questionId, choice_index: choiceIndex, updated_at: new Date().toISOString() }, { onConflict: "attempt_id,question_id" });
+      }
+      async function violation(type) {
+        if (locked || $("#quiz").classList.contains("hidden")) return;
+        violations++;
+        $("#violationText").textContent = `Violations: ${violations} / ${CONFIG.maxViolations}`;
+        warn(`Warning ${violations}/${CONFIG.maxViolations}: ${type}. Return to the quiz immediately.`);
+        await log(type, { count: violations });
+        if (db && attempt) await db.from("quiz_attempts").update({ violation_count: violations }).eq("id", attempt.id);
+        if (violations >= CONFIG.maxViolations) submit("Maximum violations reached");
+      }
+      function render() {
+        const q = questions[current];
+        $("#bar").style.width = `${((current + 1) / questions.length) * 100}%`;
+        $("#question").innerHTML =
+          `<div class="question-num">Question ${current + 1} of ${questions.length}</div><h2>${q.text}</h2><div>${q.choices.map((c, i) => `<label class="choice"><input type="radio" name="choice" value="${i}" ${answers[q.id] === i ? "checked" : ""}><span>${String.fromCharCode(65 + i)}. ${c}</span></label>`).join("")}</div>`;
+        document.querySelectorAll("input[name=choice]").forEach((r) =>
+          r.addEventListener("change", async (e) => {
+            answers[q.id] = +e.target.value;
+            await autosave(q.id, answers[q.id]);
+          }),
+        );
+        $("#prev").disabled = current === 0;
+        $("#next").textContent = current === questions.length - 1 ? "Submit quiz" : "Next question";
+      }
+      function timer() {
+        const m = String(Math.floor(seconds / 60)).padStart(2, "0"),
+          s = String(seconds % 60).padStart(2, "0");
+        $("#timer").textContent = `${m}:${s}`;
+        if (seconds <= 0) submit("Time expired");
+        seconds--;
+      }
+      async function submit(reason = "Submitted by student") {
+        if (locked) return;
+        locked = true;
+        clearInterval(tick);
+        $("#quiz").classList.add("hidden");
+        $("#complete").classList.remove("hidden");
+        const unanswered = questions.length - Object.keys(answers).length;
+        if (db && attempt)
+          await db.from("quiz_attempts").update({ status: "submitted", submitted_at: new Date().toISOString(), violation_count: violations, submission_reason: reason }).eq("id", attempt.id);
+        $("#completeHeading").textContent = reason === "Time expired" ? "Time is up — quiz submitted" : "Quiz submitted";
+        $("#summary").innerHTML =
+          `<div class="ok">Your work has been recorded.</div><div>Answered: ${questions.length - unanswered} of ${questions.length}</div><div>Violations recorded: ${violations}</div><div>Submission reason: ${reason}</div>`;
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      }
+      async function begin() {
+        const name = $("#studentName").value.trim(),
+          studentId = $("#studentId").value.trim();
+        if (!name || !studentId) {
+          warn("Please enter your name and student ID/email.");
+          return;
+        }
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch {
+          warn("Fullscreen is required before starting.");
+          return;
+        }
+        if (readySupabase()) {
+          db = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+          const { data: a, error } = await db.rpc("start_quiz_attempt", { p_quiz_id: CONFIG.quizId, p_name: name, p_identifier: studentId });
+          if (error) {
+            warn("Could not start the Supabase attempt: " + error.message);
+            return;
+          }
+          attempt = { id: a };
+          const { data: q, error: qe } = await db.from("quiz_questions").select("id,question_text").eq("quiz_id", CONFIG.quizId);
+          const { data: c, error: ce } = q?.length
+            ? await db
+                .from("quiz_choice_options")
+                .select("question_id,choice_text")
+                .in(
+                  "question_id",
+                  q.map((x) => x.id),
+                )
+            : { data: [], error: true };
+          if (qe || ce || !q?.length) {
+            warn("No questions were found in Supabase. Using demo questions.");
+            questions = fallbackQuestions.map((x, i) => ({ id: "demo-" + i, text: x.text, choices: shuffle(x.choices) }));
+          } else questions = shuffle(q).map((x) => ({ id: x.id, text: x.question_text, choices: shuffle(c.filter((y) => y.question_id === x.id).map((y) => y.choice_text)) }));
+        } else {
+          questions = shuffle(fallbackQuestions).map((x, i) => ({ id: "demo-" + i, text: x.text, choices: shuffle(x.choices) }));
+          warn("Demo mode: add your Supabase URL, anon key, and quiz ID in CONFIG before using this with students.");
+        }
+        $("#setup").classList.add("hidden");
+        $("#quiz").classList.remove("hidden");
+        $("#status").textContent = "In progress";
+        $("#limitText").textContent = CONFIG.maxViolations;
+        render();
+        timer();
+        tick = setInterval(timer, 1000);
+      }
+      $("#startBtn").addEventListener("click", begin);
+      $("#prev").addEventListener("click", () => {
+        if (current > 0) {
+          current--;
+          render();
+        }
+      });
+      $("#next").addEventListener("click", () => {
+        if (current === questions.length - 1) submit();
+        else {
+          current++;
+          render();
+        }
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && locked) return;
+        if (document.hidden) violation("Tab switch or browser minimized");
+      });
+      window.addEventListener("blur", () => violation("Browser focus lost"));
+      document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement && !locked && $("#quiz").classList.contains("hidden") === false) violation("Fullscreen exited");
+      });
+      window.addEventListener("beforeunload", () => {
+        if (db && attempt) db.from("quiz_violations").insert({ attempt_id: attempt.id, event_type: "Page unload", detail: {} });
+      });
+    </script>
+  </body>
+</html>
